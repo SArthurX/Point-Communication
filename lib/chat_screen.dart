@@ -13,8 +13,10 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => ChatProvider(),
       child: MaterialApp(
+        
         home: ChatScreen(),
       ),
+
     );
   }
 }
@@ -108,7 +110,7 @@ class ChatScreen extends StatelessWidget {
                       chatProvider.addMessage(_controller.text, true);
                       // 模擬對方訊息的接收
                       Future.delayed(Duration(seconds: 1), () {
-                        chatProvider.addMessage("這是對方的回覆", false);
+                        chatProvider.addMessage("模擬回覆", false);
                       });
                       _controller.clear();
                     }

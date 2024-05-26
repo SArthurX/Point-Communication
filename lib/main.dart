@@ -19,6 +19,7 @@ class MyApp extends StatelessWidget {
         routes: {
           '/select_page': (context) => select_Page(),
         },
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
