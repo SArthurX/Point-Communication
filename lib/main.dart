@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'chat_screen.dart';
 import 'select.dart';
+import 'setting.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
         home: ChatScreen(),
         routes: {
           '/select_page': (context) => select_Page(),
+          '/setting_page': (context) => setting_Page(),
         },
         debugShowCheckedModeBanner: false,
       ),

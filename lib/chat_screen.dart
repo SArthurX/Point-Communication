@@ -13,10 +13,8 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => ChatProvider(),
       child: MaterialApp(
-        
         home: ChatScreen(),
       ),
-
     );
   }
 }
@@ -40,86 +38,126 @@ class ChatScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('聊天室'),
         leading: IconButton(
-          icon: Icon(Icons.gps_fixed_outlined),
+          icon: Icon(Icons.person_outlined),
           onPressed: () {
-            Navigator.pushNamed(context, '/select_page');
+            Navigator.pushNamed(context, '/setting_page');
           },
         ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: chatProvider.messages.length,
-              itemBuilder: (context, index) {
-                final message = chatProvider.messages[index];
-                return Align(
-                  alignment: message.isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                    decoration: BoxDecoration(
-                      color: message.isMe ? Colors.blue : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      message.text,
-                      style: TextStyle(
-                          color: message.isMe ? Colors.white : Colors.black),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 40.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      labelText: '輸入訊息',
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 20.0,
-                        vertical: 10.0,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(40.0),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(40.0),
-                        borderSide: BorderSide(
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: () {
-                    if (_controller.text.isNotEmpty) {
-                      chatProvider.addMessage(_controller.text, true);
-                      // 模擬對方訊息的接收
-                      Future.delayed(Duration(seconds: 1), () {
-                        chatProvider.addMessage("模擬回覆", false);
-                      });
-                      _controller.clear();
-                    }
-                  },
-                ),
-              ],
-            ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.gps_fixed_outlined),
+            onPressed: () {
+              Navigator.pushNamed(context, '/select_page');
+            },
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              child: Text('側邊欄標題'),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+            ),
+            ListTile(
+              title: Text('USER1'),
+              onTap: () {
+                // 點擊項目 1 的處理邏輯
+                Navigator.pop(context); // 關閉側邊欄
+              },
+            ),
+            ListTile(
+              title: Text('USER2'),
+              onTap: () {
+                // 點擊項目 2 的處理邏輯
+                Navigator.pop(context); // 關閉側邊欄
+              },
+            ),
+          ],
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                itemCount: chatProvider.messages.length,
+                itemBuilder: (context, index) {
+                  final message = chatProvider.messages[index];
+                  return Align(
+                    alignment: message.isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      padding:
+                          EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                      decoration: BoxDecoration(
+                        color: message.isMe ? Colors.blue : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        message.text,
+                        style: TextStyle(
+                            color: message.isMe ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 40.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        labelText: '輸入訊息',
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 10.0,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(40.0),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(40.0),
+                          borderSide: BorderSide(
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.send),
+                    onPressed: () {
+                      if (_controller.text.isNotEmpty) {
+                        chatProvider.addMessage(_controller.text, true);
+                        Future.delayed(Duration(seconds: 1), () {
+                          chatProvider.addMessage("模擬回覆", false);
+                        });
+                        _controller.clear();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
