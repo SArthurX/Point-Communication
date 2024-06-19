@@ -1,0 +1,11 @@
+{
+  "additionalFiles": "../..",
+  "builtInToolsFolders": "",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "esp32:esp32:esp32doit-devkit-v1:FlashFreq=80,UploadSpeed=921600,DebugLevel=none,EraseFlash=none",
+  "hardwareFolders": "/Users/sx/Library/Arduino15/packages",
+  "otherLibrariesFolders": "/Users/sx/Documents/Arduino/libraries",
+  "runtime.ide.version": "10607",
+  "sketchLocation": "/Users/sx/point_communication/esp"
+}
