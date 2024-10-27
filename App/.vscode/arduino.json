@@ -1,0 +1,5 @@
+{
+    "board": "esp32:esp32:esp32doit-devkit-v1",
+    "sketch": "esp/esp.ino",
+    "port": "/dev/tty.usbserial-0001"
+}
