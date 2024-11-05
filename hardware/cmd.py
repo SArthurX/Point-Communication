@@ -1,7 +1,14 @@
 import serial
 import threading
 import time
+from flask import Flask, jsonify
 from utils import *
+
+
+app = Flask(__name__)
+
+latest_uwb_data = {}
+
 
 TRACKER_RNG_NTF_MSG = "[{}] {} {:>9} {:>4} cm {:>3}º"
 
@@ -16,7 +23,8 @@ class TlvDefs:
     APP_TRACKER = 0x2
     TLV_APP_CMD = 0x01
     APP_START = 0x10
-    # 通知類型
+    APP_STOP = 0x11
+
     NTF_BLE_TARGET_SCANNED = 0xA1
     NTF_UWB_RNG_DATA = 0xA2
     NTF_UWB_DISTANCE_ALERT = 0xA3
@@ -77,24 +85,31 @@ class MSerial(threading.Thread):
 
 
     def process_response(self, data):
-        if len(data) < 3:
-            print("Received incomplete data.")
-            return
-        
-        tlv_type = data[0]
-        tlv_length = (data[1] << 8) | data[2]
-        tlv_value = data[3:]
-        
-        print("Received TLV data:" ,data,"Type:", tlv_type, "Length:", tlv_length, "Value:", tlv_value)
+            global latest_uwb_data 
+            if len(data) < 3:
+                print("Received incomplete data.")
+                return
+            
+            tlv_type = data[0]
+            tlv_length = (data[1] << 8) | data[2]
+            tlv_value = data[3:]
+            
+            if tlv_type == TlvDefs.NTF_UWB_RNG_DATA:
+                ble_mac = get_mac_from_byte_array(tlv_value[0:6])
+                ble_short_name = get_string_from_byte_array(tlv_value[6:15])
+                distance = get_int_from_byte_array(tlv_value[15:17])
+                aoa = parse_aoa_value(get_int_from_byte_array(tlv_value[17:19]))
+                time_stamp = get_time_stamp()
+                print(TRACKER_RNG_NTF_MSG.format(time_stamp, ble_mac, ble_short_name, distance, aoa))
 
-
-        ble_mac = get_mac_from_byte_array(tlv_value[0:6])
-        ble_short_name = get_string_from_byte_array(tlv_value[6:15])
-        distance = get_int_from_byte_array(tlv_value[15:17])
-        aoa = parse_aoa_value(get_int_from_byte_array(tlv_value[17:19]))
-        time_stamp = get_time_stamp()
-        print(TRACKER_RNG_NTF_MSG.format(time_stamp, ble_mac, ble_short_name, distance, aoa))
-
+                # 更新最新的 UWB 資料
+                latest_uwb_data = {
+                    "mac_address": ble_mac,
+                    "device_name": ble_short_name,
+                    "distance": distance,
+                    "angle": aoa,
+                    "timestamp": time_stamp
+                }
         # 解析不同類型的回傳值
         # if tlv_type == TlvDefs.NTF_BLE_TARGET_SCANNED:
         #     # 使用工具函數解析 BLE MAC 地址和裝置名稱
@@ -125,41 +140,57 @@ class MSerial(threading.Thread):
         # else:
         #     print("Unknown TLV type:", tlv_type)
 
-
-
-def main():
-    # 初始化 serial 和 TLV builder
-    port = "/dev/tty.usbserial-D30A2TJB" 
-    m_serial = MSerial(port)
-    m_serial.start() 
-    tlv_builder = TlvBuilder()
-
-    # 發送 APP_START 指令以啟動追蹤應用
-    tlv_builder.tlv_start(TlvDefs.TLV_APP_CMD)
-    tlv_builder.tlv_add_byte(TlvDefs.APP_START)
-    tlv_builder.tlv_add_byte(TlvDefs.APP_TRACKER)
-    tlv_builder.tlv_send(m_serial)
-    time.sleep(1)
-
-    # 發送 TRACKER_START_SCAN 指令以開始 BLE 掃描
-    # tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
-    # tlv_builder.tlv_add_byte(TlvDefs.TRACKER_START_SCAN)
-    # tlv_builder.tlv_send(m_serial)
-    # time.sleep(10) 
-
-    # # 發送 TRACKER_STOP_SCAN 指令以停止 BLE 掃描
-    # tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
-    # tlv_builder.tlv_add_byte(TlvDefs.TRACKER_STOP_SCAN)
-    # tlv_builder.tlv_send(m_serial)
-
-    # 發送 TRACKER_TRACK_DEVICE_START 指令以追蹤特定裝置
-    tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
-    tlv_builder.tlv_add_byte(TlvDefs.TRACKER_TRACK_DEVICE_START)
-    mac_address = bytearray([0x00, 0x60, 0x37, 0x76, 0xB0, 0xEF])  
-    tlv_builder.tlv_add_data(mac_address)
-    tlv_builder.tlv_send(m_serial)
-
-    print("sent cmd done")
+@app.route('/get_data', methods=['GET'])
+def get_data():
+    """API 路由：提供最新的 UWB 資訊"""
+    if latest_uwb_data:
+        return jsonify(latest_uwb_data)
+    else:
+        return jsonify({"message": "No data available"}), 404
 
 if __name__ == "__main__":
-    main()
+    try:
+        # 初始化 serial 和 TLV builder
+        port = "/dev/tty.usbserial-D30A2TJB" 
+        m_serial = MSerial(port)
+        m_serial.start() 
+        tlv_builder = TlvBuilder()
+
+        # 發送 APP_START 指令以啟動追蹤應用
+        tlv_builder.tlv_start(TlvDefs.TLV_APP_CMD)
+        tlv_builder.tlv_add_byte(TlvDefs.APP_START)
+        tlv_builder.tlv_add_byte(TlvDefs.APP_TRACKER)
+        tlv_builder.tlv_send(m_serial)
+        time.sleep(1)
+
+        # 發送 TRACKER_START_SCAN 指令以開始 BLE 掃描
+        # tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
+        # tlv_builder.tlv_add_byte(TlvDefs.TRACKER_START_SCAN)
+        # tlv_builder.tlv_send(m_serial)
+        # time.sleep(10) 
+
+        # # 發送 TRACKER_STOP_SCAN 指令以停止 BLE 掃描
+        # tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
+        # tlv_builder.tlv_add_byte(TlvDefs.TRACKER_STOP_SCAN)
+        # tlv_builder.tlv_send(m_serial)
+
+        # 發送 TRACKER_TRACK_DEVICE_START 指令以追蹤特定裝置
+        tlv_builder.tlv_start(TlvDefs.TLV_TRACKER_CMD)
+        tlv_builder.tlv_add_byte(TlvDefs.TRACKER_TRACK_DEVICE_START)
+        mac_address = bytearray([0x00, 0x60, 0x37, 0x76, 0xB0, 0xEF])  
+        tlv_builder.tlv_add_data(mac_address)
+        tlv_builder.tlv_send(m_serial)
+
+        print("sent cmd done")
+        
+        app.run(debug=True, use_reloader=False)
+
+    except KeyboardInterrupt:
+            print("Shutting down gracefully...")
+            tlv_builder.tlv_start(TlvDefs.TLV_APP_CMD)
+            tlv_builder.tlv_add_byte(TlvDefs.APP_STOP)
+            tlv_builder.tlv_send(m_serial)
+            m_serial.active = False  
+            m_serial.join()  
+            print("Exited safely.")
+
