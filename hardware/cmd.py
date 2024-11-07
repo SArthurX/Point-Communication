@@ -24,7 +24,7 @@ class TlvDefs:
     TLV_APP_CMD = 0x01
     APP_START = 0x10
     APP_STOP = 0x11
-
+    # 通知類型
     NTF_BLE_TARGET_SCANNED = 0xA1
     NTF_UWB_RNG_DATA = 0xA2
     NTF_UWB_DISTANCE_ALERT = 0xA3
@@ -94,22 +94,21 @@ class MSerial(threading.Thread):
             tlv_length = (data[1] << 8) | data[2]
             tlv_value = data[3:]
             
-            if tlv_type == TlvDefs.NTF_UWB_RNG_DATA:
-                ble_mac = get_mac_from_byte_array(tlv_value[0:6])
-                ble_short_name = get_string_from_byte_array(tlv_value[6:15])
-                distance = get_int_from_byte_array(tlv_value[15:17])
-                aoa = parse_aoa_value(get_int_from_byte_array(tlv_value[17:19]))
-                time_stamp = get_time_stamp()
-                print(TRACKER_RNG_NTF_MSG.format(time_stamp, ble_mac, ble_short_name, distance, aoa))
+            ble_mac = get_mac_from_byte_array(tlv_value[0:6])
+            ble_short_name = get_string_from_byte_array(tlv_value[6:15])
+            distance = get_int_from_byte_array(tlv_value[15:17])
+            aoa = parse_aoa_value(get_int_from_byte_array(tlv_value[17:19]))
+            time_stamp = get_time_stamp()
+            print(TRACKER_RNG_NTF_MSG.format(time_stamp, ble_mac, ble_short_name, distance, aoa))
 
-                # 更新最新的 UWB 資料
-                latest_uwb_data = {
-                    "mac_address": ble_mac,
-                    "device_name": ble_short_name,
-                    "distance": distance,
-                    "angle": aoa,
-                    "timestamp": time_stamp
-                }
+            # 更新最新的 UWB 資料
+            latest_uwb_data = {
+                "mac_address": ble_mac,
+                "device_name": ble_short_name,
+                "distance": distance,
+                "angle": aoa,
+                "timestamp": time_stamp
+            }
         # 解析不同類型的回傳值
         # if tlv_type == TlvDefs.NTF_BLE_TARGET_SCANNED:
         #     # 使用工具函數解析 BLE MAC 地址和裝置名稱
@@ -140,13 +139,26 @@ class MSerial(threading.Thread):
         # else:
         #     print("Unknown TLV type:", tlv_type)
 
-@app.route('/get_data', methods=['GET'])
+@app.route('/getAngle', methods=['GET'])
 def get_data():
     """API 路由：提供最新的 UWB 資訊"""
+    global latest_uwb_data
     if latest_uwb_data:
         return jsonify(latest_uwb_data)
     else:
         return jsonify({"message": "No data available"}), 404
+    
+@app.route('/', methods=['GET'])
+def home():
+    """API 首頁路由：顯示簡單的歡迎訊息"""
+    return jsonify({
+        "message": "歡迎使用 UWB 資料 API！",
+        "endpoints": {
+            "/getAngle": "取得最新的 UWB 資訊"
+        },
+        "description": "使用此 API 來檢索最新的超寬頻 (UWB) 裝置追蹤資料。"
+    })
+
 
 if __name__ == "__main__":
     try:
@@ -183,7 +195,7 @@ if __name__ == "__main__":
 
         print("sent cmd done")
         
-        app.run(debug=True, use_reloader=False)
+        app.run(host="0.0.0.0" ,port="5005" ,use_reloader=False ,debug=True)
 
     except KeyboardInterrupt:
             print("Shutting down gracefully...")
